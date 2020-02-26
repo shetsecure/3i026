@@ -16,7 +16,6 @@ class Classifier:
         Attention: cette classe est une classe abstraite, elle ne peut pas être
         instanciée.
     """
-    #TODO: A Compléter
     def __init__(self, input_dimension):
         """ Constructeur de Classifier
             Argument:
@@ -58,8 +57,6 @@ class Classifier:
         
         return float(sum(acc) / N)
     
-# ---------------------------
-# ------------------------ A COMPLETER :
 class ClassifierLineaireRandom(Classifier):
     """ Classe pour représenter un classifieur linéaire aléatoire
         Cette classe hérite de la classe Classifier
@@ -99,7 +96,7 @@ class ClassifierLineaireRandom(Classifier):
 class ClassifierPerceptron(Classifier):
     """ Perceptron de Rosenblatt
     """
-    def __init__(self, input_dimension, learning_rate, max_iter=1e6):
+    def __init__(self, input_dimension, learning_rate, max_iter=1e2):
         """ Constructeur de Classifier
             Argument:
                 - intput_dimension (int) : dimension de la description des exemples
@@ -143,8 +140,34 @@ class ClassifierPerceptron(Classifier):
             x: une description
         """
         return 1 if self.score(x) > 0 else -1
+    
+class ClassifierOneStepPerceptron(ClassifierLineaireRandom):
+    
+    def __init__(self, input_dimension):
+        """ Constructeur de Classifier
+            Argument:
+                - intput_dimension (int) : dimension de la description des exemples
+            Hypothèse : input_dimension > 0
+        """
+        self.weights = np.random.normal(0, 0.5, input_dimension)
+        self.trained = False
+    
+    # override training method, to calculate pseudo-inverse matrix as the solution to the MSE cost function
+    def train(self, desc_set, label_set):
+        """ Permet d'entrainer le modele sur l'ensemble donné
+            desc_set: ndarray avec des descriptions
+            label_set: ndarray avec les labels correspondants
+            Hypothèse: desc_set et label_set ont le même nombre de lignes
+        """
+        if not self.trained:
+            X = desc_set
+            y = label_set
+            w = np.linalg.lstsq(np.matmul(X.T, X), np.matmul(X.T, y), rcond=None)
+            w = np.reshape(w[0], (1, w[0].shape[0]))[0]
+            self.weights = w
+            
+        self.trained = True
 
-# ---------------------------
 class ClassifierPerceptronKernel(Classifier):
     def __init__(self, input_dimension,learning_rate, kernel, max_iter=1e3):
         """ Constructeur de Classifier
@@ -190,7 +213,6 @@ class ClassifierPerceptronKernel(Classifier):
                     
             counter += 1
                 
-# ------------------------ A COMPLETER :
 
 class ClassifierKNN(Classifier):
     """ Classe pour représenter un classifieur par K plus proches voisins.
