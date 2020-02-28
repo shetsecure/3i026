@@ -150,7 +150,6 @@ class ClassifierOneStepPerceptron(ClassifierLineaireRandom):
             Hypothèse : input_dimension > 0
         """
         self.weights = np.random.normal(0, 0.5, input_dimension)
-        self.trained = False
     
     # override training method, to calculate pseudo-inverse matrix as the solution to the MSE cost function
     def train(self, desc_set, label_set):
@@ -159,14 +158,11 @@ class ClassifierOneStepPerceptron(ClassifierLineaireRandom):
             label_set: ndarray avec les labels correspondants
             Hypothèse: desc_set et label_set ont le même nombre de lignes
         """
-        if not self.trained:
-            X = desc_set
-            y = label_set
-            w = np.linalg.lstsq(np.matmul(X.T, X), np.matmul(X.T, y), rcond=None)
-            w = np.reshape(w[0], (1, w[0].shape[0]))[0]
-            self.weights = w
-            
-        self.trained = True
+        X = desc_set
+        y = label_set
+        w = np.linalg.lstsq(np.matmul(X.T, X), np.matmul(X.T, y), rcond=None)
+        w = np.reshape(w[0], (1, w[0].shape[0]))[0]
+        self.weights = w
 
 class ClassifierPerceptronKernel(Classifier):
     def __init__(self, input_dimension,learning_rate, kernel, max_iter=1e3):
