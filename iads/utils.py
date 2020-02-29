@@ -13,6 +13,7 @@ Année: semestre 2 - 2019-2020, Sorbonne Université
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from itertools import combinations
 
 # ------------------------ 
 def plot2DSet(desc,labels):
@@ -88,5 +89,16 @@ def create_XOR(nb_points, var):
  # ------------------------ 
     
 class KernelPoly:
-    def transform(self,x):
-        return np.asarray([1, x[0], x[1], x[0] * x[0], x[1] * x[1], x[0] * x[1]])
+    def transform(self, x, degree = 2): # what polynomial will we return
+        assert(isinstance(degree, int) and degree >= 1 and degree <= len(x))
+        
+        l = [1]
+        l.extend([xx for xx in x])
+        start_from = 1
+        
+        if degree > 1:
+            # now we will add the combinaisons
+            for i in range(2, degree+1):
+                l.extend([np.product(list(x)) for x in  list(combinations(x, i))])
+                
+        return np.asarray(l)

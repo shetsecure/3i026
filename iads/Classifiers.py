@@ -69,6 +69,7 @@ class ClassifierLineaireRandom(Classifier):
             Hypothèse : input_dimension > 0
         """
         self.weights = np.random.normal(0, 0.5, input_dimension)
+        self.w_init = self.weights
         #self.weights = np.random.randn(input_dimension)
         
     def train(self, desc_set, label_set):
@@ -91,6 +92,9 @@ class ClassifierLineaireRandom(Classifier):
         """
         return 1 if self.score(x) >= 0 else -1
     
+    def reset(self):
+        self.weights = self.w_init
+    
     
 # ---------------------------
 class ClassifierPerceptron(Classifier):
@@ -103,7 +107,8 @@ class ClassifierPerceptron(Classifier):
                 - learning_rate :
             Hypothèse : input_dimension > 0
         """
-        self.weights = np.random.normal(0, 0.5, input_dimension)
+        self.weights = np.random.normal(0, 0.5, input_dimension + 1)
+        self.w_init = self.weights
         #self.weights = np.zeros(input_dimension)
         self.learning_rate = learning_rate
         self.max_iter = max_iter
@@ -125,7 +130,13 @@ class ClassifierPerceptron(Classifier):
             for i in ordre:
                 if self.predict(desc_set[i]) * label_set[i] < 0:
                     wrong = True
-                    self.weights += self.learning_rate * desc_set[i] * label_set[i]
+                    
+                    # adjusting dim for the description (adding artificial 1 for the bias)
+                    x = list(desc_set[i])
+                    x.insert(0, 1)
+                    x = np.asarray(x)
+                    
+                    self.weights += self.learning_rate * x * label_set[i]
                     
             counter += 1
             
@@ -133,15 +144,33 @@ class ClassifierPerceptron(Classifier):
         """ rend le score de prédiction sur x (valeur réelle)
             x: une description
         """
+        # adjusting dim for the description (adding artificial 1 for the bias)
+        x = list(x)
+        x.insert(0, 1)
+        x = np.asarray(x)
+        
         return np.dot(x, self.weights)
     
     def predict(self, x):
         """ rend la prediction sur x (soit -1 ou soit +1)
             x: une description
         """
+        
         return 1 if self.score(x) > 0 else -1
     
-class ClassifierOneStepPerceptron(ClassifierLineaireRandom):
+    def reset(self):
+        self.weights = self.w_init
+    
+    def toString(self):
+        s = "ClassifierPerceptron: \n"
+        
+        for key, val in self.__dict__.items():
+            if str(key) != "w_init":
+                s += "\t [+] " + str(key) + " = " + str(val) + '\n'
+            
+        return s
+    
+class ClassifierOneStepPerceptron(ClassifierPerceptron):
     
     def __init__(self, input_dimension):
         """ Constructeur de Classifier
@@ -149,7 +178,8 @@ class ClassifierOneStepPerceptron(ClassifierLineaireRandom):
                 - intput_dimension (int) : dimension de la description des exemples
             Hypothèse : input_dimension > 0
         """
-        self.weights = np.random.normal(0, 0.5, input_dimension)
+        self.weights = np.random.normal(0, 0.5, input_dimension + 1)
+        self.w_init = self.weights
     
     # override training method, to calculate pseudo-inverse matrix as the solution to the MSE cost function
     def train(self, desc_set, label_set):
@@ -158,11 +188,23 @@ class ClassifierOneStepPerceptron(ClassifierLineaireRandom):
             label_set: ndarray avec les labels correspondants
             Hypothèse: desc_set et label_set ont le même nombre de lignes
         """
-        X = desc_set
+        X = np.c_[np.ones(desc_set.shape[0]), desc_set]
         y = label_set
         w = np.linalg.lstsq(np.matmul(X.T, X), np.matmul(X.T, y), rcond=None)
         w = np.reshape(w[0], (1, w[0].shape[0]))[0]
         self.weights = w
+        
+    def reset(self):
+        self.weights = self.w_init
+        
+    def toString(self):
+        s = "ClassifierPerceptron: \n"
+        
+        for key, val in self.__dict__.items():
+            if str(key) != "w_init":
+                s += "\t [+] " + str(key) + " = " + str(val) + '\n'
+            
+        return s
 
 class ClassifierPerceptronKernel(Classifier):
     def __init__(self, input_dimension,learning_rate, kernel, max_iter=1e3):
@@ -176,6 +218,7 @@ class ClassifierPerceptronKernel(Classifier):
         self.learning_rate = learning_rate
         self.kernel = kernel
         self.weights = self.kernel.transform(np.random.normal(0, 0.5, input_dimension))
+        self.w_init = self.weights
         self.max_iter = max_iter
         
     def score(self,x):
@@ -208,6 +251,18 @@ class ClassifierPerceptronKernel(Classifier):
                     self.weights += self.learning_rate * label_set[i] * self.kernel.transform(desc_set[i])
                     
             counter += 1
+            
+    def reset(self):
+        self.weights = self.w_init
+        
+    def toString(self):
+        s = "ClassifierPerceptron: \n"
+        
+        for key, val in self.__dict__.items():
+            if str(key) != "w_init":
+                s += "\t [+] " + str(key) + " = " + str(val) + '\n'
+            
+        return s
                 
 
 class ClassifierKNN(Classifier):
@@ -285,3 +340,13 @@ class ClassifierKNN(Classifier):
         """        
         self.desc_set = desc_set.copy()
         self.label_set = label_set.copy()
+
+    def reset(self):
+        pass
+
+    def toString(self):
+        s = "ClassifierKNN: \n"
+        s += "\t [+] k = " + str(self.k) + '\n'
+        s += "\t [+] input_dimension = " + str(self.input_dimension) + '\n'
+        
+        return s
