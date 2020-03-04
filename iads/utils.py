@@ -86,11 +86,17 @@ def create_XOR(nb_points, var):
     labels = np.asarray([1 for i in range(nb_points*2)] + [-1 for i in range(nb_points*2)])
     
     return data, labels
- # ------------------------ 
     
 class KernelPoly:
-    def transform(self, x, degree = 2): # what polynomial will we return
-        assert(isinstance(degree, int) and degree >= 1 and degree <= len(x))
+    def __init__(self, degree=2):
+        assert(int(degree) >= 1)
+        self.degree = degree
+    
+    def transform(self, x, degree = None): # what polynomial will we return
+        assert(int(degree) >= 1 and int(degree) <= len(x))
+        
+        if degree is None:
+            degree = self.degree
         
         l = [1]
         l.extend([xx for xx in x])
@@ -102,3 +108,5 @@ class KernelPoly:
                 l.extend([np.product(list(x)) for x in  list(combinations(x, i))])
                 
         return np.asarray(l)
+
+    

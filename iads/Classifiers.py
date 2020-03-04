@@ -198,7 +198,7 @@ class ClassifierOneStepPerceptron(ClassifierPerceptron):
         self.weights = self.w_init
         
     def toString(self):
-        s = "ClassifierPerceptron: \n"
+        s = "ClassifierOneStepPerceptron: \n"
         
         for key, val in self.__dict__.items():
             if str(key) != "w_init":
@@ -207,7 +207,7 @@ class ClassifierOneStepPerceptron(ClassifierPerceptron):
         return s
 
 class ClassifierPerceptronKernel(Classifier):
-    def __init__(self, input_dimension,learning_rate, kernel, max_iter=1e3):
+    def __init__(self, input_dimension, learning_rate, kernel, max_iter=1e3):
         """ Constructeur de Classifier
             Argument:
                 - intput_dimension (int) : dimension de la description des exemples
@@ -256,10 +256,13 @@ class ClassifierPerceptronKernel(Classifier):
         self.weights = self.w_init
         
     def toString(self):
-        s = "ClassifierPerceptron: \n"
+        s = "ClassifierPerceptronKernel: \n"
         
         for key, val in self.__dict__.items():
             if str(key) != "w_init":
+                if str(key) == "kernel":
+                    val = "polynomial's degree is " + str(self.kernel.degree)
+                    
                 s += "\t [+] " + str(key) + " = " + str(val) + '\n'
             
         return s
@@ -347,6 +350,5 @@ class ClassifierKNN(Classifier):
     def toString(self):
         s = "ClassifierKNN: \n"
         s += "\t [+] k = " + str(self.k) + '\n'
-        s += "\t [+] input_dimension = " + str(self.input_dimension) + '\n'
         
         return s
