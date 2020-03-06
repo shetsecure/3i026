@@ -93,10 +93,14 @@ class KernelPoly:
         self.degree = degree
     
     def transform(self, x, degree = None): # what polynomial will we return
-        assert(int(degree) >= 1 and int(degree) <= len(x))
-        
         if degree is None:
             degree = self.degree
+            
+        assert(int(degree) >= 1)
+        
+        if (int(degree) > len(x)):
+            print(" Cannot create a 3rd kernel polynomial if the number of features < ", degree)
+        assert(int(degree) <= len(x))
         
         l = [1]
         l.extend([xx for xx in x])

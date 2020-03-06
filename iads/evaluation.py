@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from itertools import chain
 
@@ -50,7 +51,7 @@ def crossvalidation(C, DS, m=10):
     
     return (train_accs.mean(), train_accs.std()), (test_accs.mean(), test_accs.std())
 
-def crossvalidation(LC, DS, m, debug=True):
+def crossvalidation_multiple(LC, DS, m, debug=True):
     """ List[Classifieur] * tuple[array, array] * int ->  List[tuple[tuple[float,float], tuple[float,float]]]
         Hypothèse: m>0
         Par défaut, m vaut 10
@@ -112,9 +113,9 @@ def crossvalidation(LC, DS, m, debug=True):
     
     return returned_values
 
-def compare(X, y, classif_dict, m=10, show_res=True, plot=False, returnRes=False):   
+def compare(X, y, classif_dict, m=10, show_res=True, plot=False):   
 
-    Resultats = crossvalidation(list(classif_dict.values()), (X, y), m, debug=False)
+    Resultats = crossvalidation_multiple(list(classif_dict.values()), (X, y), m, debug=False)
     
     def plot_comparaison():
         perf_train = []
@@ -156,5 +157,49 @@ def compare(X, y, classif_dict, m=10, show_res=True, plot=False, returnRes=False
     if plot:
         plot_comparaison()
         
-    if returnRes:
-        return Resultats
+    return Resultats
+
+
+def errorBarComparisonPlot(Resultats, classif_dict, m=10):
+    #Resultats = np.asarray(crossvalidation_multiple(list(classif_dict.values()), (X, y), m, debug=False))
+    Resultats = np.asarray(Resultats)
+    
+    train_perf = []
+    test_perf = []
+    for i in range(len(Resultats)):
+        train_perf.append(Resultats[i][0]*100)
+        test_perf.append(Resultats[i][1]*100)
+
+    train_perf = np.asarray(train_perf)
+    test_perf = np.asarray(test_perf)
+    
+    df_train = pd.DataFrame.from_dict({
+        "model" : list(classif_dict.keys()),
+        "mean": train_perf[:, 0],
+        "std": train_perf[:, 1]
+    })
+
+    df_test = pd.DataFrame.from_dict({
+        "model" : list(classif_dict.keys()),
+        "mean": test_perf[:, 0],
+        "std": test_perf[:, 1]
+    })
+    
+    plt.ylabel('Performane')
+    plt.xlabel('Classifiers')
+    plt.xticks(np.arange(len(classif_dict)), list(classif_dict.keys()), rotation='vertical')
+ 
+    plt.errorbar(df_train['model'], df_train['mean'], df_train['std'], lw=2, label='Training performane')
+    plt.legend()
+    plt.show()
+    
+    
+    plt.ylabel('Performane')
+    plt.xlabel('Classifiers')
+    plt.xticks(np.arange(len(classif_dict)), list(classif_dict.keys()), rotation='vertical')
+ 
+    plt.errorbar(df_test['model'], df_test['mean'], df_test['std'], lw=2, label='Testing performane', color='#ff7f0e')
+    plt.legend()
+    plt.show()
+    
+    
