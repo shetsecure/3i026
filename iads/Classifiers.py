@@ -341,8 +341,8 @@ class ClassifierKNN(Classifier):
             label_set: ndarray avec les labels correspondants
             Hypothèse: desc_set et label_set ont le même nombre de lignes
         """        
-        self.desc_set = desc_set.copy()
-        self.label_set = label_set.copy()
+        self.desc_set = desc_set
+        self.label_set = label_set
 
     def reset(self):
         pass
