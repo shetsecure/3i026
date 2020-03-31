@@ -51,6 +51,35 @@ def crossvalidation(C, DS, m=10):
     
     return (train_accs.mean(), train_accs.std()), (test_accs.mean(), test_accs.std())
 
+def leave_one_out(C, DS):
+    """ 
+        Classifieur * tuple[array, array] -> float
+    """
+    
+    data_desc, data_labels = DS[0], DS[1]
+    indices = [i for i in range(len(data_desc))]
+    np.random.shuffle(indices)
+    
+    marked_points = 0 # nombre de points marqués
+    
+    # grab the first index in the list and make it the one who's out (for test) (out)
+    # train on the rest
+    # test on the out (index)
+    # append out to the end of the list (indices)
+    
+    for test_index in range(len(indices)):
+        out = indices.pop(0)
+        
+        # training
+        C.train(data_desc[indices], data_labels[indices])
+        
+        # transforming the args to list, to make it compatible for the accuracy method
+        marked_points += C.accuracy([data_desc[out]], [data_labels[out]]) 
+        
+        indices.append(out) # add to the end of the list
+        
+    return marked_points / len(data_desc)
+
 def crossvalidation_multiple(LC, DS, m, debug=True):
     """ List[Classifieur] * tuple[array, array] * int ->  List[tuple[tuple[float,float], tuple[float,float]]]
         Hypothèse: m>0
@@ -113,7 +142,18 @@ def crossvalidation_multiple(LC, DS, m, debug=True):
     
     return returned_values
 
-def compare(X, y, classif_dict, m=10, show_res=True, plot=False):   
+def compare(X, y, classif_dict, m=10, show_res=True, plot=False): 
+    """
+          Comparing multiple classifiers on a single dataset using m-fold cross validation.
+          
+          @params:
+              [+] X: desc data (np ndarray)
+              [+] y: labels    (np ndarray)
+              [+] classif_dict : dictionnary of classifiers (dict where keys are str (name of classifier) and value are objects)
+              [+] m : how many folds for cross_validation (int)
+              [+] show_res: show detailed results of the comparaison
+              [+] plot: boolean value for plotting the results
+    """
 
     Resultats = crossvalidation_multiple(list(classif_dict.values()), (X, y), m, debug=False)
     
@@ -201,5 +241,4 @@ def errorBarComparisonPlot(Resultats, classif_dict, m=10):
     plt.errorbar(df_test['model'], df_test['mean'], df_test['std'], lw=2, label='Testing performane', color='#ff7f0e')
     plt.legend()
     plt.show()
-    
     

@@ -13,6 +13,7 @@ Année: semestre 2 - 2019-2020, Sorbonne Université
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from . import evaluation as ev # we used from . because of sys.path.append('../')
 from itertools import combinations
 
 # ------------------------ 
@@ -86,6 +87,122 @@ def create_XOR(nb_points, var):
     labels = np.asarray([1 for i in range(nb_points*2)] + [-1 for i in range(nb_points*2)])
     
     return data, labels
+
+def categories_2_numeriques(DF,nom_col_label =''):
+    """ DataFrame * str -> DataFrame
+        nom_col_label est le nom de la colonne Label pour ne pas la transformer
+        si vide, il n'y a pas de colonne label
+        rend l'équivalent numérique de DF
+    """
+    dfloc = DF.copy()  # pour ne pas modifier DF
+    L_new_cols = []    # pour mémoriser le nom des nouvelles colonnes créées
+    Noms_cols = [nom for nom in dfloc.columns if nom != nom_col_label]
+     
+    for c in Noms_cols:
+        if dfloc[c].dtypes != 'object':  # pour détecter un attribut non catégoriel
+            L_new_cols.append(c)  # on garde la colonne telle quelle dans ce cas
+        else:
+            for v in dfloc[c].unique():
+                nom_col = c + '_' + v    # nom de la nouvelle colonne à créer
+                dfloc[nom_col] = 0
+                dfloc.loc[dfloc[c] == v, nom_col] = 1
+                L_new_cols.append(nom_col)
+            
+    return dfloc[L_new_cols]  # on rend que les valeurs numériques
+
+# ------------------------ A COMPLETER :
+class AdaptateurCategoriel:
+    """ Classe pour adapter un dataframe catégoriel par l'approche one-hot encoding
+    """
+    def __init__(self, DF, nom_col_label=''):
+        """ Constructeur
+            Arguments: 
+                - DataFrame représentant le dataset avec des attributs catégoriels
+                - str qui donne le nom de la colonne du label (que l'on ne doit pas convertir)
+                  ou '' si pas de telle colonne. On mémorise ce nom car il permettra de toujours
+                  savoir quelle est la colonne des labels.
+        """
+        self.DF = DF  # on garde le DF original  (rem: on pourrait le copier)
+        self.nom_col_label = nom_col_label 
+        
+        # Conversion des colonnes catégorielles en numériques:
+        self.DFcateg = categories_2_numeriques(DF, nom_col_label)
+        
+        # Pour faciliter les traitements, on crée 2 variables utiles:
+        self.data_desc = self.DFcateg.values
+        self.data_label = self.DF[nom_col_label].values
+        # Dimension du dataset convertit (sera utile pour définir le classifieur)
+        self.dimension = self.data_desc.shape[1]
+                
+    def get_dimension(self):
+        """ rend la dimension du dataset dé-catégorisé 
+        """
+        return self.dimension
+        
+        
+    def train(self,classifieur):
+        """ Permet d'entrainer un classifieur sur les données dé-catégorisées 
+        """        
+        classifieur.train(self.data_desc, self.data_label)
+    
+    def accuracy(self,classifieur):
+        """ Permet de calculer l'accuracy d'un classifieur sur les données
+            dé-catégorisées de l'adaptateur.
+            Hypothèse: le classifieur doit avoir été entrainé avant sur des données
+            similaires (mêmes colonnes/valeurs)
+        """
+        return classifieur.accuracy(self.data_desc,self.data_label)
+
+    def converti_categoriel(self, x):
+        """ transforme un exemple donné sous la forme d'un dataframe contenant
+            des attributs catégoriels en son équivalent dé-catégorisé selon le 
+            DF qui a servi à créer cet adaptateur
+            rend le dataframe numérisé correspondant             
+        """
+        # Assuming that the example is one line.
+        # IMPORTANT: this will work assuming that new columns are constructed in the same way we did before:
+        # nom_col = c + '_' + v
+        
+        x_copy = list(x.values[0])
+        all_values = [c.split('_')[-1] for c in list(self.DFcateg.columns)]
+        
+        # casting to set will not change the len, because the columns are uniques anyways
+        intersection = list(set(x_copy).intersection(set(all_values)))
+        
+        one_columns = [all_values.index(i) for i in intersection] # the indices of columns that will have a value of 1
+        
+        values = [0] * len(all_values)
+        
+        for index in one_columns:
+            values[index] = 1
+            
+        cols = list(self.DFcateg.columns)
+            
+        # Adding the label
+        if self.nom_col_label != '':
+            values.append(x[self.nom_col_label][0])
+            cols.append(self.nom_col_label)
+        else: # we'll consider it as the value of the last column
+            values.append(x_copy[-1])
+            cols.append('LabelX') 
+        
+        return  pd.DataFrame([values], columns=cols)
+    
+    def predict(self, x, classifieur):
+        """ rend la prédiction de x avec le classifieur donné
+            Avant d'être classifié, x doit être converti
+        """
+        x_df = self.converti_categoriel(x)
+        return classifieur.predict(x_df[self.DFcateg.columns].values[0])
+    
+    def cross_validation(self, classifier, m):
+        if m == 1:
+            return ev.leave_one_out(classifier, (self.data_desc, self.data_label))
+        
+        return ev.crossvalidation(classifier, (self.data_desc, self.data_label), m)
+    
+    def compare_classifiers(self, classif_dict, m=10, show_res=True, plot=False):
+        return ev.compare(self.data_desc, self.data_label, classif_dict, m, show_res, plot)
     
 class KernelPoly:
     def __init__(self, degree=2):
@@ -112,5 +229,3 @@ class KernelPoly:
                 l.extend([np.product(list(x)) for x in  list(combinations(x, i))])
                 
         return np.asarray(l)
-
-    
