@@ -9,6 +9,8 @@ Année: semestre 2 - 2019-2020, Sorbonne Université
 # Import de packages externes
 import numpy as np
 import pandas as pd
+from . import utils as ut
+from copy import copy
 
 # ---------------------------
 class Classifier:
@@ -352,3 +354,65 @@ class ClassifierKNN(Classifier):
         s += "\t [+] k = " + str(self.k) + '\n'
         
         return s
+    
+class ClassifierArbreDecision(Classifier):
+    """ Classe pour représenter un classifieur par arbre de décision
+    """
+    
+    def __init__(self, input_dimension, epsilon, LNoms=[]):
+        """ Constructeur
+            Argument:
+                - intput_dimension (int) : dimension de la description des exemples
+                - epsilon (float) : paramètre de l'algorithme (cf. explications précédentes)
+                - LNoms : Liste des noms de dimensions (si connues)
+            Hypothèse : input_dimension > 0
+        """
+        self.dimension = input_dimension
+        self.epsilon = epsilon
+        self.LNoms = LNoms
+        # l'arbre est manipulé par sa racine qui sera un Noeud
+        self.racine = None
+        
+    def toString(self):
+        """  -> str
+            rend le nom du classifieur avec ses paramètres
+        """
+        return 'ClassifierArbreDecision ['+str(self.dimension) + '] eps='+str(self.epsilon)
+        
+    def train(self, desc_set, label_set):
+        """ Permet d'entrainer le modele sur l'ensemble donné
+            desc_set: ndarray avec des descriptions
+            label_set: ndarray avec les labels correspondants
+            Hypothèse: desc_set et label_set ont le même nombre de lignes
+        """        
+        self.racine = ut.construit_AD(desc_set, label_set, self.epsilon, self.LNoms)
+    
+    def score(self,x):
+        """ rend le score de prédiction sur x (valeur réelle)
+            x: une description
+        """
+        # cette méthode ne fait rien dans notre implémentation :
+        pass
+    
+    def predict(self, x):
+        """ x (array): une description d'exemple
+            rend la prediction sur x             
+        """
+        root = copy(self.racine)
+        assert(len(self.LNoms) == len(x))
+        
+        try:
+            while not root.est_feuille():
+                root_index = list(self.LNoms).index(root.nom_attribut)
+                root = copy(root.Les_fils[x[root_index]])
+        except KeyError:
+            print("*** Warning: attribut " + str(root.nom_attribut) + " -> Valeur inconnue: " + str(x[root_index]))
+            return 0 # inspired from below (la classification de certains exemples produit un warning)
+            
+        return root.classe
+
+    def affiche(self,GTree):
+        """ affichage de l'arbre sous forme graphique
+            Cette fonction modifie GTree par effet de bord
+        """
+        self.racine.to_graph(GTree)
