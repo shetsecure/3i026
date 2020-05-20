@@ -12,6 +12,9 @@ import pandas as pd
 from . import utils as ut
 from copy import copy
 
+import multiprocessing
+import concurrent
+
 # ---------------------------
 class Classifier:
     """ Classe pour représenter un classifieur
@@ -354,6 +357,29 @@ class ClassifierKNN(Classifier):
         s += "\t [+] k = " + str(self.k) + '\n'
         
         return s
+    
+    def fast_accuracy(self, desc_set, label_set):
+        """ 
+        Calculate accuracy using multiple processes.
+        
+            desc_set: ndarray avec des descriptions
+            label_set: ndarray avec les labels correspondants
+            Hypothèse: desc_set et label_set ont le même nombre de lignes
+        """
+        N = len(desc_set)
+        
+        cpu_count = multiprocessing.cpu_count()
+        executor = concurrent.futures.ProcessPoolExecutor(cpu_count)
+
+        futures = [executor.submit(self.predict, item) for item in desc_set]
+        concurrent.futures.wait(futures)
+        
+        predictions = [f.result() for f in futures]
+        
+        acc = [1 if predictions[i] * label_set[i] > 0 else 0 for i in range(N)]
+        
+        return float(sum(acc) / N)
+    
     
 class ClassifierArbreDecision(Classifier):
     """ Classe pour représenter un classifieur par arbre de décision
