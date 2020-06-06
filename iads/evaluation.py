@@ -198,47 +198,28 @@ def compare(X, y, classif_dict, m=10, show_res=True, plot=False):
         plot_comparaison()
         
     return Resultats
-
-
-def errorBarComparisonPlot(Resultats, classif_dict, m=10):
-    #Resultats = np.asarray(crossvalidation_multiple(list(classif_dict.values()), (X, y), m, debug=False))
-    Resultats = np.asarray(Resultats)
     
-    train_perf = []
-    test_perf = []
-    for i in range(len(Resultats)):
-        train_perf.append(Resultats[i][0]*100)
-        test_perf.append(Resultats[i][1]*100)
-
-    train_perf = np.asarray(train_perf)
-    test_perf = np.asarray(test_perf)
+def confusion_matrix(Y_true : np.array, Y_pred : np.array) -> dict:
+    """
+        Return the confusion matrix as dictionnary
+    """
+    assert len(Y_true) > 0
+    assert len(Y_true) == len(Y_pred)
     
-    df_train = pd.DataFrame.from_dict({
-        "model" : list(classif_dict.keys()),
-        "mean": train_perf[:, 0],
-        "std": train_perf[:, 1]
-    })
-
-    df_test = pd.DataFrame.from_dict({
-        "model" : list(classif_dict.keys()),
-        "mean": test_perf[:, 0],
-        "std": test_perf[:, 1]
-    })
+    keys = ['TP', 'TN', 'FP', 'FN', 'Precision', 'Recall']
+    d = dict(zip(keys, [0] * len(keys)))
     
-    plt.ylabel('Performane')
-    plt.xlabel('Classifiers')
-    plt.xticks(np.arange(len(classif_dict)), list(classif_dict.keys()), rotation='vertical')
- 
-    plt.errorbar(df_train['model'], df_train['mean'], df_train['std'], lw=2, label='Training performane')
-    plt.legend()
-    plt.show()
+    for correct_class, estimated_class in zip(Y_true, Y_pred):
+        if correct_class == 1 and estimated_class == 1:
+            d['TP'] += 1
+        elif correct_class == -1 and estimated_class == -1:
+            d['TN'] += 1
+        elif correct_class == -1 and estimated_class == 1:
+            d['FP'] += 1
+        elif correct_class == 1 and estimated_class == -1:
+            d['FN'] += 1
+            
+    d['Precision'] = d['TP'] / (d['TP'] + d['FP'])
+    d['Recall'] = d['TP'] / (d['TP'] + d['FN'])
     
-    
-    plt.ylabel('Performane')
-    plt.xlabel('Classifiers')
-    plt.xticks(np.arange(len(classif_dict)), list(classif_dict.keys()), rotation='vertical')
- 
-    plt.errorbar(df_test['model'], df_test['mean'], df_test['std'], lw=2, label='Testing performane', color='#ff7f0e')
-    plt.legend()
-    plt.show()
-    
+    return d

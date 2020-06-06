@@ -287,6 +287,8 @@ class ClassifierKNN(Classifier):
         """
         self.input_dimension = input_dimension
         self.k = k
+        self._last_predictions = None
+        self._last_predicted_desc = None
     
     def dist_euc(self, x, y):
         dist = sum([(yi - xi) ** 2 for yi, xi in zip(y, x)])
@@ -320,12 +322,12 @@ class ClassifierKNN(Classifier):
         """ rend la proportion de +1 parmi les k ppv de x (valeur réelle)
             x: une description : un ndarray
         """
-        dist_array = np.array([self.dist_euc(x,y) for y in self.desc_set])
+
+        dist_array = np.asarray([self.dist_euc(x,y) for y in self.desc_set])
         # The k-th element will be in its final sorted position and all smaller
         # elements will be moved before it and all larger elements behind it. 
-        # perform partial sort ( in O(n) time as opposed to full sort that is O(n) * log(n))
+        # perform partial sort ( in O(n) time as opposed to full sort that is O(n * log(n)) )
         sorted_indexs = np.argpartition(dist_array, self.k)[:self.k]
-        
         somme = sum([self.label_set[i] for i in sorted_indexs])
         
         return somme
@@ -358,6 +360,31 @@ class ClassifierKNN(Classifier):
         
         return s
     
+    def predict_all(self, desc_set):
+        """
+            Predict all labels of desc_set using multiple processes.
+        """
+        try:
+            N = len(desc_set)
+
+            cpu_count = multiprocessing.cpu_count()
+            executor = concurrent.futures.ProcessPoolExecutor(cpu_count)
+
+            futures = [executor.submit(self.predict, item) for item in desc_set]
+            concurrent.futures.wait(futures)
+
+            predictions = [f.result() for f in futures]
+
+            self._last_predictions = predictions
+            self._last_predicted_desc = desc_set
+
+            return predictions
+        
+        except KeyboardInterrupt:
+            for future in futures:
+                future.cancel()
+            
+    
     def fast_accuracy(self, desc_set, label_set):
         """ 
         Calculate accuracy using multiple processes.
@@ -368,17 +395,38 @@ class ClassifierKNN(Classifier):
         """
         N = len(desc_set)
         
-        cpu_count = multiprocessing.cpu_count()
-        executor = concurrent.futures.ProcessPoolExecutor(cpu_count)
-
-        futures = [executor.submit(self.predict, item) for item in desc_set]
-        concurrent.futures.wait(futures)
-        
-        predictions = [f.result() for f in futures]
+        if np.all(self._last_predicted_desc == desc_set):
+            predictions = self._last_predictions
+        else:
+            predictions = self.predict_all(desc_set)
         
         acc = [1 if predictions[i] * label_set[i] > 0 else 0 for i in range(N)]
         
         return float(sum(acc) / N)
+    
+    
+class MultiClassKNN(ClassifierKNN):
+    
+    def __init__(self, input_dimension, k):
+        """ Constructeur de Classifier
+        Argument:
+            - intput_dimension (int) : dimension d'entrée des exemples
+            - k (int) : nombre de voisins à considérer
+        Hypothèse : input_dimension > 0
+        """
+        super().__init__(input_dimension, k)
+        
+    def predict(self, x):
+        """ rend la prediction sur x (-1 ou +1)
+            x: une description : un ndarray
+        """
+        dist_array = np.asarray([self.dist_euc(x,y) for y in self.desc_set])
+        sorted_indices = np.argpartition(dist_array, self.k)[:self.k]
+
+        possible_labels = [self.label_set[i][0] for i in sorted_indices]
+        
+        # return most occured label
+        return max( [(possible_labels.count(label), label) for label in set(possible_labels)] )[1]
     
     
 class ClassifierArbreDecision(Classifier):
